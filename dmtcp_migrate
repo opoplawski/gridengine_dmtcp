@@ -1,0 +1,8 @@
+#!/bin/bash
+# dmtcp_migrate - migrate a dmtcp job
+
+# Retrieve the dmtcp port
+export DMTCP_PORT=$(cat $TMPDIR/dmtcp_port)
+
+# Checkpoint the jobs, blocking until done, and then quit
+/usr/bin/dmtcp_command --quiet bc && /usr/bin/dmtcp_command --quiet q

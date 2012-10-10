@@ -1,0 +1,16 @@
+#!/bin/bash
+# dmtcp_cleanup - run at job exit
+
+# Get the base from the config file
+eval `grep ^ckpt_dir= $SGE_JOB_SPOOL_DIR/config`
+CKPTDIR=${ckpt_dir}/${JOB_ID}.${SGE_TASK_ID/undefined/1}
+
+# Cleanup the proper *.dmtcp checkpoint files in the current directory
+eval `grep ^given_ckpt_files= ${CKPTDIR}/dmtcp_restart_script.sh`
+rm $given_ckpt_files
+
+# Remove dmtcp checkpoint directory
+rm -r ${CKPTDIR}
+
+# Always exit true
+exit 0

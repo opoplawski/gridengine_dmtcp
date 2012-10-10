@@ -1,0 +1,43 @@
+#!/bin/bash
+# dmtcp_starter - dmtcp job starter - runs jobs under dmtcp checkpointing
+
+# starter_methods need to be installed per queue, but we only 
+# want to setup dmtcp checkpointing for jobs that use it
+if [ "$SGE_CKPT_ENV" = dmtcp ]
+then
+  # Get the base from the config file
+  eval `grep ^ckpt_dir= $SGE_JOB_SPOOL_DIR/config`
+
+  # Make the per task checkpoint directory if it doesn't already exist
+  CKPTDIR=${ckpt_dir}/${JOB_ID}.${SGE_TASK_ID/undefined/1}
+  mkdir -p $CKPTDIR
+
+  # Setup dmtcp_coordinator - this will get killed by the shepherd
+  export DMTCP_PORT=`dmtcp_coordinator --port 0 --ckptdir $CKPTDIR --exit-on-last --interval 0 --background 2>&1 | grep "Port:" | /bin/sed -e 's/Port://g' -e 's/[ \t]//g'`
+
+  # Record the port for later use by checkpointing scripts
+  echo $DMTCP_PORT > $TMPDIR/dmtcp_port
+
+  if [ "$RESTARTED" -eq 2 ]
+  then
+    # Override the setting in dmtcp_restart_script.sh
+    export DMTCP_HOST=$HOSTNAME
+    # Restart the job
+    exec $CKPTDIR/dmtcp_restart_script.sh
+  else
+    # We need to move the job script to remove the hostname from the path
+    cp $1 $CKPTDIR/jobscript
+    shift
+    # Start the job (TODO - be able to set the argv[0] for login shell)
+    exec dmtcp_checkpoint --quiet $SGE_STARTER_SHELL_PATH $CKPTDIR/jobscript "$@"
+  fi
+else
+  # Start the job normally with proper login shell handling
+  if [ "$SGE_STARTER_USE_LOGIN_SHELL" == true ]
+  then
+    shellname=$(basename $SGE_STARTER_SHELL_PATH)
+    exec -a -${shellname} $SGE_STARTER_SHELL_PATH "$@"
+  else
+    exec $SGE_STARTER_SHELL_PATH "$@"
+  fi 
+fi

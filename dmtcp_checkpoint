@@ -1,0 +1,8 @@
+#!/bin/bash
+# dmtcp_checkpoint - checkpoint a dmtcp job
+
+# Retrieve the dmtcp port
+export DMTCP_PORT=$(cat $TMPDIR/dmtcp_port)
+
+# Checkpoint the job, waiting until done
+/usr/bin/dmtcp_command --quiet bc
