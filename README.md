@@ -7,7 +7,7 @@ Installation
 ============
 
 Install the various dmtcp\_\* scripts onto all of the executions hosts.  I
-install into /usr/share/gridengine/util, and I distribute them via puppet.
+install into /usr/share/gridengine/util and distribute them via puppet.
 
 Configuration
 =============
@@ -23,13 +23,18 @@ hosts.
     migr_command       /usr/share/gridengine/util/dmtcp_migrate
     restart_command    NONE
     clean_command      /usr/share/gridengine/util/dmtcp_cleanup
-    ckpt_dir           /data/cora/dmtcp
+    ckpt_dir           /nfs/dmtcp
     signal             NONE
     when               xsr
 
 Save the above to a file (say dmtcp) and then run:
 
     qconf -Ackpt dmtcp
+
+Create your ckpt\_dir with something like:
+
+    mkdir /nfs/dmtcp
+    chmod 1777 /nfs/dmtcp
 
 Finally, you need to set the starter\_method and checkpoint environment or all 
 queues that are going to use dmtcp checkpointing.  Run:
