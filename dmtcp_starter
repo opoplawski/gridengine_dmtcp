@@ -16,6 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Apparently SGE_STARTER_SHELL_PATH doesn't always get set with qrshd
+[ -z "$SGE_STARTER_SHELL_PATH" ] && SGE_STARTER_SHELL_PATH=$SHELL
+
 # starter_methods need to be installed per queue, but we only 
 # want to setup dmtcp checkpointing for jobs that use it
 if [ "$SGE_CKPT_ENV" = dmtcp ]
