@@ -46,6 +46,41 @@ For each queue that will use dmtcp checkpointing and set:
     ckpt_list             dmtcp
     starter_method        /usr/share/gridengine/util/dmtcp_starter
 
+CPU Restriction
+===============
+
+NOTE: This will not work for task jobs!
+
+For code compiled with the Intel compilers with various -ax flags, it is important that 
+the job remain on a machine with equivalent capability.  In order to do this we specify
+a number of cpuflag_\* complexes:
+
+    cpuflag_avx         cfsa        BOOL        ==    YES         NO         0        0
+    cpuflag_pni         cfsp        BOOL        ==    YES         NO         0        0
+    cpuflag_sse         cfs         BOOL        ==    YES         NO         0        0
+    cpuflag_sse2        cfs2        BOOL        ==    YES         NO         0        0
+    cpuflag_sse3        cfs3        BOOL        ==    YES         NO         0        0
+    cpuflag_sse4_1      cfs41       BOOL        ==    YES         NO         0        0
+    cpuflag_sse4_2      cfs42       BOOL        ==    YES         NO         0        0
+
+We add a new checkpoint environment dmtcp_cpu which uses a different migration script:
+
+    ckpt_name          dmtcp_cpu
+    interface          APPLICATION-LEVEL
+    ckpt_command       /usr/share/gridengine/util/dmtcp_checkpoint
+    migr_command       /usr/share/gridengine/util/dmtcp_migrate_cpu
+    restart_command    NONE
+    clean_command      /usr/share/gridengine/util/dmtcp_cleanup
+    ckpt_dir           /data/cora/dmtcp
+    signal             NONE
+    when               xsr
+
+You need to specify the cpuflags available on the different machines.  This could be done
+on a per host, queue, or by load sensor (if the machines are not shut down when idle).
+
+All hosts with dmtcp_cpu checkpointing need to be submit or admin hosts to be able to run
+qstat/qalter in the migration script.
+
 License
 =======
 
