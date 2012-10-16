@@ -1,0 +1,36 @@
+#!/bin/bash
+# dmtcp_migrate_cpu - migrate a dmtcp job to a similar cpu
+# NOTE: Don't use this with task jobs!
+#
+# Copyright 2012 Orion Poplawski <orion@cora.nwra.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Figure out what cpu flags we need to specify
+for f in $(awk -F: '/^flags/ { print $2; exit }' /proc/cpuinfo)
+do
+  case $f in
+  pni|sse*|avx*) cpuhr="$cpuhr,cpuflag_${f}=1";;
+  esac
+done
+
+# Modify the job's hard resource list
+hr=$(qstat -j ${JOB_ID} | awk '/^hard resource_list:/ {print $3; exit}')
+qalter -l ${hr}${cpuhr} ${JOB_ID}
+
+# Retrieve the dmtcp port
+export DMTCP_PORT=$(cat $TMPDIR/dmtcp_port)
+
+# Checkpoint the jobs, blocking until done, and then quit
+/usr/bin/dmtcp_command --quiet bc && /usr/bin/dmtcp_command --quiet q
