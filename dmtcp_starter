@@ -21,7 +21,7 @@
 
 # starter_methods need to be installed per queue, but we only 
 # want to setup dmtcp checkpointing for jobs that use it
-if [ "$SGE_CKPT_ENV" = dmtcp ]
+if [ "${SGE_CKPT_ENV/dmtcp}" != "${SGE_CKPT_ENV}" ]
 then
   # Get the base from the config file
   eval `grep ^ckpt_dir= $SGE_JOB_SPOOL_DIR/config`
