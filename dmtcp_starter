@@ -19,7 +19,7 @@
 # Apparently SGE_STARTER_SHELL_PATH doesn't always get set with qrshd
 [ -z "$SGE_STARTER_SHELL_PATH" ] && SGE_STARTER_SHELL_PATH=$SHELL
 
-# starter_methods need to be installed per queue, but we only 
+# starter_methods need to be installed per queue, but we only
 # want to setup dmtcp checkpointing for jobs that use it
 if [ "${SGE_CKPT_ENV/dmtcp}" != "${SGE_CKPT_ENV}" ]
 then
@@ -31,15 +31,12 @@ then
   mkdir -p $CKPTDIR
 
   # Setup dmtcp_coordinator - this will get killed by the shepherd
-  export DMTCP_PORT=`dmtcp_coordinator --port 0 --ckptdir $CKPTDIR --exit-on-last --interval 0 --background 2>&1 | grep "Port:" | /bin/sed -e 's/Port://g' -e 's/[ \t]//g'`
-
-  # Record the port for later use by checkpointing scripts
-  echo $DMTCP_PORT > $TMPDIR/dmtcp_port
+  dmtcp_coordinator --quiet --port 0 --port-file $TMPDIR/dmtcp_port --ckptdir $CKPTDIR --exit-on-last  --daemon 2>&1
 
   if [ "$RESTARTED" -eq 2 ]
   then
     # Override the setting in dmtcp_restart_script.sh
-    export DMTCP_HOST=$HOSTNAME
+    export DMTCP_HOST=`hostname`
     # Restart the job
     exec $CKPTDIR/dmtcp_restart_script.sh
   else
@@ -47,15 +44,23 @@ then
     cp $1 $CKPTDIR/jobscript
     shift
     # Start the job (TODO - be able to set the argv[0] for login shell)
-    exec dmtcp_checkpoint --quiet $SGE_STARTER_SHELL_PATH $CKPTDIR/jobscript "$@"
+    exec dmtcp_checkpoint -p `cat $TMPDIR/dmtcp_port` --quiet $SGE_STARTER_SHELL_PATH $CKPTDIR/jobscript "$@"
   fi
 else
-  # Start the job normally with proper login shell handling
-  if [ "$SGE_STARTER_USE_LOGIN_SHELL" == true ]
-  then
-    shellname=$(basename $SGE_STARTER_SHELL_PATH)
-    exec -a -${shellname} $SGE_STARTER_SHELL_PATH "$@"
-  else
-    exec $SGE_STARTER_SHELL_PATH "$@"
-  fi 
+  # Start the job normally with proper shell handling
+  case "$SGE_STARTER_SHELL_START_MODE" in
+  unix_behavior)
+    exec "$@" ;;
+  #
+  # Although  posix_compliant and script_from_stdin are the same, the behavior is different:
+  # posix_compliant => $1 is the name of the script
+  # script_from_stdin => $1 is -s (option to the shell to read from stdin)
+  #
+  posix_compliant | script_from_stdin)
+    if [ "$SGE_STARTER_USE_LOGIN_SHELL" = "true" ]; then
+      exec -l -a "${SGE_STARTER_SHELL_PATH##*/}" "$SGE_STARTER_SHELL_PATH" "${@}"
+    else
+      exec -a "${SGE_STARTER_SHELL_PATH##*/}" "$SGE_STARTER_SHELL_PATH" "${@}"
+    fi ;;
+  esac
 fi
